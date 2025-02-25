@@ -66,6 +66,31 @@ def early_stop_fn(trials):
 
     return best_loss_now >= best_loss_before  # Stop if no improvement
 
+def display_results(model, model_name, x_train, y_train, x_test, y_test):
+    
+    model.fit(x_train, y_train)
+
+    y_pred = model.predict(x_test)
+
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, pos_label=0)
+    recall = recall_score(y_test, y_pred, pos_label=0)
+    metrics = []
+    metrics.append([accuracy, recall, precision])
+
+    plt.figure(figsize=(3, 3))
+    cm = confusion_matrix(y_test, y_pred)
+    s = sns.heatmap(cm, cbar = False, annot=True, cmap='Blues')
+    s.set_xlabel('Pred')
+    s.set_ylabel('True')
+    s.set_title(model_name)
+
+    metrics_df = pd.DataFrame(metrics, columns=['Accuracy', 'Recall', 'Precision'])
+    print(metrics_df)
+    plt.show()
+
+
+
 # Some Sklearn models do not have feature importance function.
 # So, wrappers for those classifiers were created.
 class MyBaggingClassifier(BaggingClassifier):
@@ -83,7 +108,7 @@ class MyBernoulliNB(BernoulliNB):
         return np.abs(self.feature_log_prob_[1] - self.feature_log_prob_[0])
 
 # Naive Bayes hyperparameter tuning with HyperOpt  
-def hyperOpt_NaiveBayes(X_subset, Y, preprocessor, scorer, best_params_all,  seed):
+def hyperOpt_NaiveBayes(X_subset, Y, preprocessor, scorer, seed, cur_best_params=None):
 
     loo = LeaveOneOut()
      
@@ -115,7 +140,6 @@ def hyperOpt_NaiveBayes(X_subset, Y, preprocessor, scorer, best_params_all,  see
     # Print the best hyperparameters
     best_params = space_eval(space, best_params)
     print("Best hyperparameters:", best_params)
-    best_params_all['NaiveBayes'] = best_params
 
     # Evaluate the model with the best hyperparameters
     final_clf = MyBernoulliNB(**best_params)
@@ -124,33 +148,13 @@ def hyperOpt_NaiveBayes(X_subset, Y, preprocessor, scorer, best_params_all,  see
                 ("classifier", final_clf)
     ])
 
+    display_results(final_model, 'NaiveBayes', x_train_subset, y_train, x_test_subset, y_test)
 
-    final_model.fit(x_train_subset, y_train)
-    # accuracy = final_model.score(x_test_subset,y_test)
-    # print("Accuracy:", accuracy)
+    return best_params
 
-    y_pred = final_model.predict(x_test_subset)
-
-    accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, pos_label=0)
-    recall = recall_score(y_test, y_pred, pos_label=0)
-    metrics = []
-    metrics.append([accuracy, recall, precision])
-
-    # importances.append(clf.feature_importances_)
-    fig, ax = plt.subplot(figsize=(3,3))
-    cm = confusion_matrix(y_test, y_pred)
-    s = sns.heatmap(cm, cbar = False, annot=True, cmap='Blues')
-    s.set_xlabel('Pred')
-    s.set_ylabel('True')
-    s.set_title('NaiveBayes')
-
-    metrics_df = pd.DataFrame(metrics, columns=['Accuracy', 'Recall', 'Precision'])
-    print(metrics_df)
-    plt.show()
 
 # AdaBoost hyperparameter tuning with HyperOpt
-def hyperOpt_AdaBoost(X_subset, Y, preprocessor, scorer, best_params_all, seed):
+def hyperOpt_AdaBoost(X_subset, Y, preprocessor, scorer, seed):
 
     loo = LeaveOneOut()
     x_train_subset, x_test_subset, y_train, y_test = train_test_split(X_subset, Y, test_size=0.2, random_state=seed)
@@ -191,7 +195,6 @@ def hyperOpt_AdaBoost(X_subset, Y, preprocessor, scorer, best_params_all, seed):
     # Print the best hyperparameters
     best_params = space_eval(space, best_params)
     print("Best hyperparameters:", best_params)
-    best_params_all['AdaBoost'] = best_params
 
     # Evaluate the model with the best hyperparameters
     best_params['n_estimators'] = int(best_params['n_estimators'])
@@ -210,33 +213,13 @@ def hyperOpt_AdaBoost(X_subset, Y, preprocessor, scorer, best_params_all, seed):
                 ("classifier", final_clf)
     ])
 
+    display_results(final_model, 'AdaBoost', x_train_subset, y_train, x_test_subset, y_test)
 
-    final_model.fit(x_train_subset, y_train)
-    # accuracy = final_model.score(x_test_subset,y_test)
-    # print("Accuracy:", accuracy)
+    return best_params
 
-    y_pred = final_model.predict(x_test_subset)
-
-    accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, pos_label=0)
-    recall = recall_score(y_test, y_pred, pos_label=0)
-    metrics = []
-    metrics.append([accuracy, recall, precision])
-
-    fig, ax = plt.subplot(figsize=(3,3))
-
-    cm = confusion_matrix(y_test, y_pred)
-    s = sns.heatmap(cm, cbar = False, annot=True, cmap='Blues')
-    s.set_xlabel('Pred')
-    s.set_ylabel('True')
-    s.set_title('AdaBoost')
-
-    metrics_df = pd.DataFrame(metrics, columns=['Accuracy', 'Recall', 'Precision'])
-    print(metrics_df)
-    plt.show()
-
+    
 # LinearSVC hyperparameter tuning with HyperOpt
-def hyperOpt_LinearSVC(X_subset, Y, preprocessor, scorer, best_params_all,  seed):
+def hyperOpt_LinearSVC(X_subset, Y, preprocessor, scorer,  seed):
 
     loo = LeaveOneOut()
 
@@ -246,6 +229,7 @@ def hyperOpt_LinearSVC(X_subset, Y, preprocessor, scorer, best_params_all,  seed
     def objective(params):
         #print(f"Trying params: {params}")
         clf = LinearSVC(**params, random_state=seed)
+        #clf = SVC(**params, kernel='linear', random_state=seed, probability=True)
         model = Pipeline([
                 ("preprocessing", preprocessor),
                 ("classifier", clf)
@@ -268,38 +252,111 @@ def hyperOpt_LinearSVC(X_subset, Y, preprocessor, scorer, best_params_all,  seed
     # Print the best hyperparameters
     best_params = space_eval(space, best_params)
     print("Best hyperparameters:", best_params)
-    best_params_all['SVM'] = best_params
 
     # Evaluate the model with the best hyperparameters
 
     best_params['max_iter'] = int(best_params['max_iter'])
 
     final_clf = LinearSVC(**best_params, random_state=seed)
+    #final_clf = SVC(**best_params, kernel='linear', random_state=seed, probability=True)
     final_model = Pipeline([
                 ("preprocessing", preprocessor),
                 ("classifier", final_clf)
     ])
 
+    display_results(final_model, 'LinearSVC', x_train_subset, y_train, x_test_subset, y_test)
 
+    return best_params
+    
+
+# LGBM optimization with HyperOpt
+def hyperOpt_LGBM(X_subset, Y, preprocessor, scorer,  seed):
+    
+    loo = LeaveOneOut()
+    x_train_subset, x_test_subset, y_train, y_test = train_test_split(X_subset, Y, test_size=0.2, random_state=seed)
+
+    # Define the objective function
+    def objective(params):
+        #print(f"Trying params: {params}")
+        model = LGBMClassifier(**params, verbose=-1)
+        score = cross_val_score(model, x_train_subset, y_train, cv=loo, scoring=scorer).mean()
+        return {'loss': -score, 'status': STATUS_OK}
+
+    # Define the search space
+    space = {
+        'num_leaves': scope.int(hp.quniform('num_leaves', 2, 32, 2)),  # Small range to avoid overfitting
+        'min_data_in_leaf': scope.int(hp.quniform('min_data_in_leaf', 5, 50, 5)),  # Prevent too small leaves
+        'learning_rate': hp.loguniform('learning_rate', -3, 0),  # 0.001 to 1.0
+        'max_depth': hp.choice('max_depth', [-1, 3, 5, 7]),  # Limit depth for small dataset
+        'colsample_bytree': hp.uniform('colsample_bytree', 0.5, 1.0),  # Feature selection
+        'subsample': hp.uniform('subsample', 0.5, 1.0),  # Row sampling for regularization
+        'reg_alpha': hp.loguniform('reg_alpha', -4, 1),  # L1 regularization (0.0001 to 10)
+        'reg_lambda': hp.loguniform('reg_lambda', -4, 1),  # L2 regularization (0.0001 to 10)
+        'n_estimators': scope.int(hp.quniform('n_estimators', 50, 300, 10)),  # Limit estimators for small dataset
+        'boosting_type': hp.choice('boosting_type', ['gbdt', 'dart', 'rf']),  # Try both methods
+    }
+
+    # Run the optimization
+    best_params = fmin(objective, space, algo=tpe.suggest, max_evals=500, early_stop_fn=no_progress_loss(10), rstate=np.random.default_rng(seed))
+
+    # Print the best hyperparameters
+    best_params = space_eval(space, best_params)
+    print("Best hyperparameters:", best_params)
+
+    # Evaluate the model with the best hyperparameters
+    best_params['num_leaves'] = int(best_params['num_leaves'])
+    best_params['min_data_in_leaf'] = int(best_params['min_data_in_leaf'])
+    best_params['n_estimators'] = int(best_params['n_estimators'])
+
+    final_clf = LGBMClassifier(**best_params, random_state=seed)
+    
+    final_model = Pipeline([
+                ("preprocessing", preprocessor),
+                ("classifier", final_clf)
+    ])
+
+    display_results(final_model, 'LGBM', x_train_subset, y_train, x_test_subset, y_test)
+
+    return best_params
+
+
+def hyperOpt_LGBM(X_subset, Y, preprocessor, scorer,  seed):
+
+    x_train_subset, x_test_subset, y_train, y_test = train_test_split(X_subset, Y, test_size=0.2, random_state=seed)
+
+    # Define the objective function
+    def objective(params):
+        #print(f"Trying params: {params}")
+        model = XGBClassifier(**params, verbose=-1)
+        score = cross_val_score(model, x_train_subset, y_train, cv=3, scoring=scorer).mean()
+        return {'loss': -score, 'status': STATUS_OK}
+
+    search_space = {
+        'learning_rate': hp.loguniform('learning_rate', -4, 0),  # ~0.0001 to 1
+        'max_depth': hp.choice('max_depth', [2, 3, 4, 5, 6, 7, 8, 9]),  # Integer selection
+        'n_estimators': scope.int(hp.quniform('n_estimators', 50, 300, 10)),  # Integer 50-300 in steps of 10
+        'subsample': hp.uniform('subsample', 0.5, 1.0),  # Use 50-100% of data per round
+        'colsample_bytree': hp.uniform('colsample_bytree', 0.5, 1.0),  # Use 50-100% of features per tree
+        'gamma': hp.loguniform('gamma', -5, 1),  # ~0.0067 to 2.71
+        'reg_alpha': hp.loguniform('reg_alpha', -5, 1),  # L1 regularization ~0.0067 to 2.71
+        'reg_lambda': hp.loguniform('reg_lambda', -5, 2),  # L2 regularization ~0.0067 to 7.39
+    }
+
+    # Run the optimization
+    best_params = fmin(objective, search_space, algo=tpe.suggest, max_evals=500)
+
+    # Print the best hyperparameters
+    best_params = space_eval(search_space, best_params)
+    print("Best hyperparameters:", best_params)
+
+    # Evaluate the model with the best hyperparameters
+    best_params['n_estimators'] = int(best_params['n_estimators'])
+
+    final_clf = XGBClassifier(**best_params, random_state=seed)
+    final_model = Pipeline([
+                ("preprocessing", preprocessor),
+                ("classifier", final_clf)
+    ])
     final_model.fit(x_train_subset, y_train)
-    # accuracy = final_model.score(x_test_subset,y_test)
-    # print("Accuracy:", accuracy)
-
-    y_pred = final_model.predict(x_test_subset)
-
-    accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, pos_label=0)
-    recall = recall_score(y_test, y_pred, pos_label=0)
-    metrics = []
-    metrics.append([accuracy, recall, precision])
-
-    # importances.append(clf.feature_importances_)
-    fig, ax = plt.subplot(figsize=(3,3))
-    cm = confusion_matrix(y_test, y_pred)
-    s = sns.heatmap(cm, cbar = False, annot=True, cmap='Blues')
-    s.set_xlabel('Pred')
-    s.set_ylabel('True')
-    s.set_title('LinearSVC')
-
-    metrics_df = pd.DataFrame(metrics, columns=['Accuracy', 'Recall', 'Precision'])
-    print(metrics_df)
+    accuracy = final_model.score(x_test_subset,y_test)
+    print("Accuracy:", accuracy)
