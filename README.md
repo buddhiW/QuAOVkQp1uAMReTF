@@ -2,39 +2,74 @@
 
 ## Project Overview
 
-This repository contains a classification model built for a survey dataset. The project involves selecting and evaluating different machine learning classifiers to determine the best-performing model.
-
-## Model Selection
-
-Based on LazyPredictor results, three classifiers were chosen:
-
-- **BernoulliNB**: A probabilistic model based on Naive Bayes.
-- **AdaBoost**: An ensemble method that combines weak classifiers to improve accuracy.
-- **LinearSVC**: A linear model using Support Vector Classification.
-
-## Feature Selection
-
-Feature selection is a crucial step in this project to improve model performance and reduce overfitting. Various techniques exhaustive feature search and recursive feature elimination (RFE) were explored to identify the most relevant features. The selected features significantly impact the classifier’s ability to generalize well on new data.
-
-## Installation
-
-To run this project, install the required dependencies using:
-
-```bash
-pip install -r requirements.txt
-```
-
-## Usage
-
-Run the Jupyter Notebook to execute the classification pipeline:
-
-```bash
-jupyter notebook main.ipynb
-```
+This project focuses on predicting customer satisfaction (specifically, dissatisfaction) for a logistics and delivery startup. The goal is to identify key factors influencing customer happiness and develop a predictive model to flag potentially unhappy customers. This allows for proactive intervention and improved operational efficiency.
 
 ## Dataset
 
 The dataset used in this project comes from a survey. Preprocessing steps are included in the notebook to clean and prepare the data for modeling.
+
+The dataset includes the following attributes:
+
+* **Y:** Target variable, indicating customer satisfaction (0 = unhappy, 1 = happy).
+* **X1:** My order was delivered on time (1-5 scale, 1 = less, 5 = more).
+* **X2:** Contents of my order was as I expected (1-5 scale).
+* **X3:** I ordered everything I wanted to order (1-5 scale).
+* **X4:** I paid a good price for my order (1-5 scale).
+* **X5:** I am satisfied with my courier (1-5 scale).
+* **X6:** The app makes ordering easy for me (1-5 scale).
+
+## Methodology
+
+The following steps were taken:
+
+1.  **Exploratory Data Analysis (EDA):** Understanding the data distribution and relationships between variables.
+2.  **Model Selection:**
+    * LazyPredictor was used to identify promising classification models.
+    * BernoulliNB, AdaBoost, and LinearSVC were selected for further evaluation.
+3.  **Feature Selection:**
+    * Recursive Feature Elimination with Cross-Validation ([RFECV](https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.RFECV.html)) was used to identify the most influential predictors.
+    * Leave-one-out cross validation was used due to the small size of the dataset.
+4.  **Hyperparameter Optimization:**
+    * [HyperOpt](http://hyperopt.github.io/hyperopt/) toolkit along with leave-one-out cross validation was used to optimize the hyperparameters of the selected models.
+5.  **Ensemble Methods:**
+    * Voting and stacking ensemble techniques were implemented to improve predictive performance.
+6.  **Model Evaluation:**
+    * Comprehensive evaluation metrics (accuracy, recall, precision, F1-score) were used to assess model performance.
+
+## Repository Contents
+
+* `data/`: Contains the dataset used in the project.
+* `main.ipynb`: Jupyter notebook containing data analysis and model development.
+* `models.py`: Functions for hyperparameter optimization using HyperOpt.
+* `EDA/`: More results from EDA.
+* `README.md`: This file.
+* `requirements.txt`: List of Python dependencies.
+
+## Installation
+
+1.  Clone the repository:
+
+    ```bash
+    git clone https://github.com/buddhiW/E02fXDJdn1pt6m5n
+    ```
+
+2.  Create a virtual environment (recommended):
+
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On macOS/Linux
+    venv\Scripts\activate  # On Windows
+    ```
+
+3.  Install dependencies:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## Usage
+
+Open and run `main.ipynb` to reproduce the analysis.
 
 ## Conclusion:
 
